@@ -8,7 +8,7 @@ El lenguaje **.aggy** es un lenguaje de programación de propósito general, fue
 ##  Organización del Proyecto
 El compilador está estructurado para ser modular, facilitando su mantenimiento y escalabilidad:
 
-``text
+```text
 /proyecto-compilador-aggy
 │
 ├── Makefile              # Automatización de la compilación (gcc)
@@ -24,7 +24,7 @@ El compilador está estructurado para ser modular, facilitando su mantenimiento 
     ├── parser.c          # Analizador sintáctico (Gramática BNF)
     ├── semantic.c        # Análisis semántico y verificación de tipos
     └── utils.c           # Funciones auxiliares y manejo de memoria
-
+    
 # Explicación de la funcionalidad de los códigos
 
 ## Archivo `include/ast.h`
