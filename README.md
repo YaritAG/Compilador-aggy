@@ -31,7 +31,7 @@ El compilador está estructurado para ser modular, facilitando su mantenimiento 
 
 Este archivo es fundamental porque define cómo se verá cada pieza del código en memoria. Sin esto, el analizador sintáctico no tendría un lugar donde guardar los resultados.
 
-### s¿Por qué empezamos aquí?
+### ¿Por qué empezamos aquí?
 - **Modularidad:** Ahora que tienes ast.h, cuando escribas parser.c, simplemente escribirás #include "../include/ast.h" y ya tendrás acceso a la estructura que define el árbol.
 
 - **Preparación para el Parser:** El parser.c no hace más que tomar tokens y llenar estos ASTNode.
@@ -49,7 +49,35 @@ Este archivo es vital porque aquí es donde "cobran vida" las funciones que decl
 
 - **Preparación:** Ahora, cuando estés en el parser.c, solo tendrás que escribir ASTNode* nodo = create_node(NODE_IF); y ya tendrás un nodo listo, limpio y seguro.
 
-## Archivo `src/scanner.h`
+## Archivo `src/scanner.c`
 
-Este componente es un Autómata Finito Determinista (AFD) simplificado. Su labor es leer el archivo fuente y agrupar caracteres en tokens que el Parser entenderá.
+Este archivo contiene la implementación real del analizador léxico. Funciona como un Autómata Finito Determinista (AFD) en código, leyendo el archivo fuente carácter por carácter para agruparlos en los tokens que definimos en el diccionario.
 
+### ¿Por qué este archivo es necesario?
+- **Procesamiento de Flujo Estrecho (ungetc):** Es el encargado de interactuar directamente con el archivo en el disco. Utiliza la función `ungetc()` para "devolver" caracteres al flujo de lectura cuando lee un símbolo de más. Esto es vital para saber, por ejemplo, dónde termina el nombre de una variable sin perder el carácter que sigue (como un espacio o un punto y coma).
+
+- **Aislamiento de la Sintaxis (identify_keyword):** de forma inteligente los identificadores creados por el usuario de las palabras protegidas del lenguaje (como if o while). Al procesar la cadena de texto de manera interna, evita que el Parser tenga que hacer comparaciones de texto, delegándole un trabajo puramente numérico y lógico.
+
+- **Ignorancia Inteligente:** Filtra y desecha todo lo que no le sirve al compilador para generar el árbol binario, como los espacios en blanco, las tabulaciones y los saltos de línea, pero aprovechando estos últimos para actualizar el contador current_line y mantener un rastreo preciso de la ubicación del análisis.
+
+## Archivo `include/tokens.h` 
+
+Este archivo actúa como el "diccionario" oficial de tu compilador. Define de forma única y centralizada cada uno de los elementos gramaticales (palabras clave, operadores, delimitadores) que el lenguaje .aggy es capaz de reconocer.
+
+### ¿Por qué este archivo es necesario?
+- **Asignación Única (enum):** Al utilizar una enumeración (typedef enum), C le asigna un número entero único a cada token automáticamente. Esto permite que el resto de los módulos se comuniquen usando números sencillos e instrucciones eficientes (como switch), en lugar de comparar costosas cadenas de texto.
+
+- **Independencia Absoluta:** Es el cimiento léxico del proyecto. No incluye ni depende de ningún otro archivo de la arquitectura, lo que evita ciclos de dependencia o problemas de compilación.
+
+- **Consistencia:** Al centralizar aquí todos los operadores (+, -, ==, etc.) y palabras clave (if, while), garantizas que tanto el Scanner (que los detecta) como el Parser (que los valida) hablen exactamente el mismo idioma.
+
+## Archivo `include/scanner.h`
+
+Este archivo define la interfaz del analizador léxico y la estructura del objeto Token. Sirve como el "puente de comunicación" que expone las funciones del Scanner para que el Parser pueda solicitar tokens bajo demanda.
+
+### ¿Por qué empezamos aquí?
+- **Resolución de Tipos:** Al colocar la directiva #include "tokens.h" al inicio, le enseñas a C la definición de TokenType antes de intentar usarlo dentro de la estructura Token. Esto elimina por completo los errores de identificadores no definidos.
+
+- **Empaquetado de Datos (struct Token):** No basta con saber qué tipo de token encontramos; el Parser necesita el texto real escrito por el usuario (el lexeme) y saber exactamente en qué fila ocurrió (line) para poder arrojar reportes de error precisos.
+
+- **Encapsulamiento de la Inicialización:**  Al declarar init_scanner(FILE *file), preparamos la arquitectura para recibir de forma limpia el flujo del archivo fuente desde el main.c, manteniendo la lógica de lectura aislada del resto del sistema.
