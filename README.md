@@ -24,6 +24,7 @@ El compilador está estructurado para ser modular, facilitando su mantenimiento 
     ├── parser.c          # Analizador sintáctico (Gramática BNF)
     ├── semantic.c        # Análisis semántico y verificación de tipos
     └── utils.c           # Funciones auxiliares y manejo de memoria
+```
     
 # Explicación de la funcionalidad de los códigos
 
