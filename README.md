@@ -28,7 +28,7 @@ El compilador está estructurado para ser modular, facilitando su mantenimiento 
     
 # Explicación de la funcionalidad de los códigos
 
-## Archivo `include/ast.h`
+## Archivo [ast.h](include/ast.h)
 
 Este archivo es fundamental porque define cómo se verá cada pieza del código en memoria. Sin esto, el analizador sintáctico no tendría un lugar donde guardar los resultados.
 
@@ -39,7 +39,7 @@ Este archivo es fundamental porque define cómo se verá cada pieza del código 
 
 - **Control de Memoria:** Al incluir las funciones create_node y free_ast en el encabezado, te obligas a ti mismo a implementar la gestión de memoria desde el primer día, evitando que tu proyecto se vuelva un caos de memory leaks al final- 
 
-## Archivo `src/utils.c`
+## Archivo [utils.c](src/utils.c)
 
 Este archivo es vital porque aquí es donde "cobran vida" las funciones que declaramos en ast.h. Como te comentaba, la clave de un compilador robusto es gestionar correctamente la memoria dinámica (malloc/free).
 
@@ -50,7 +50,7 @@ Este archivo es vital porque aquí es donde "cobran vida" las funciones que decl
 
 - **Preparación:** Ahora, cuando estés en el parser.c, solo tendrás que escribir ASTNode* nodo = create_node(NODE_IF); y ya tendrás un nodo listo, limpio y seguro.
 
-## Archivo `src/scanner.c`
+## Archivo [scanner.c](src/scanner.c)
 
 Este archivo contiene la implementación real del analizador léxico. Funciona como un Autómata Finito Determinista (AFD) en código, leyendo el archivo fuente carácter por carácter para agruparlos en los tokens que definimos en el diccionario.
 
@@ -66,7 +66,7 @@ Este archivo contiene la implementación real del analizador léxico. Funciona c
 
 - **Ignorancia Inteligente:** Filtra y desecha todo lo que no le sirve al compilador para generar el árbol binario, como los espacios en blanco, las tabulaciones y los saltos de línea, pero aprovechando estos últimos para actualizar el contador current_line y mantener un rastreo preciso de la ubicación del análisis.
 
-## Archivo `include/tokens.h` 
+## Archivo [tokens.h](include/tokens.h) 
 
 Este archivo actúa como el "diccionario" oficial de tu compilador. Define de forma única y centralizada cada uno de los elementos gramaticales (palabras clave, operadores, delimitadores) que el lenguaje .aggy es capaz de reconocer.
 
@@ -77,7 +77,7 @@ Este archivo actúa como el "diccionario" oficial de tu compilador. Define de fo
 
 - **Consistencia:** Al centralizar aquí todos los operadores (+, -, ==, etc.) y palabras clave (if, while), garantizas que tanto el Scanner (que los detecta) como el Parser (que los valida) hablen exactamente el mismo idioma.
 
-## Archivo `include/scanner.h`
+## Archivo [scanner.h](include/scanner.h)
 
 Este archivo define la interfaz del analizador léxico y la estructura del objeto Token. Sirve como el "puente de comunicación" que expone las funciones del Scanner para que el Parser pueda solicitar tokens bajo demanda.
 
@@ -88,7 +88,7 @@ Este archivo define la interfaz del analizador léxico y la estructura del objet
 
 - **Encapsulamiento de la Inicialización:**  Al declarar init_scanner(FILE *file), preparamos la arquitectura para recibir de forma limpia el flujo del archivo fuente desde el main.c, manteniendo la lógica de lectura aislada del resto del sistema.
 
-## Archivo `main.c`
+## Archivo [main.c](main.c)
 
 Este archivo se encargará de recibir el archivo .aggy desde la consola, validar su extensión (como planeamos en el diseño) e inicializar el Scanner para procesar el código. En esta etapa, lo programaremos para que imprima una lista de todos los tokens encontrados; esto nos servirá para comprobar que el Scanner funciona de forma impecable antes de construir el Parser.
 
@@ -96,3 +96,7 @@ Este archivo se encargará de recibir el archivo .aggy desde la consola, validar
 - **Aislamiento de Errores:** Al imprimir los tokens uno por uno en una tabla, puedes crear un archivo de prueba con código en .aggy y ver exactamente si el Scanner está segmentando bien las cadenas de texto antes de complicar el programa con el Parser.
 
 - **Validación de Parámetros:** Protege el sistema mediante el uso de argc e impide que el programa truene con un Segmentation Fault si el usuario olvida pasar el archivo en la consola.
+
+## Archivo [Makefile](Makefile)
+
+El Makefile es un archivo de configuración que lee la herramienta make. Le dice al sistema qué archivos compilar, cómo enlazarlos y en qué orden, ahorrándote tiempo cada vez que hagas un cambio.
