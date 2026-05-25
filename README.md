@@ -87,3 +87,12 @@ Este archivo define la interfaz del analizador léxico y la estructura del objet
 - **Empaquetado de Datos (struct Token):** No basta con saber qué tipo de token encontramos; el Parser necesita el texto real escrito por el usuario (el lexeme) y saber exactamente en qué fila ocurrió (line) para poder arrojar reportes de error precisos.
 
 - **Encapsulamiento de la Inicialización:**  Al declarar init_scanner(FILE *file), preparamos la arquitectura para recibir de forma limpia el flujo del archivo fuente desde el main.c, manteniendo la lógica de lectura aislada del resto del sistema.
+
+## Archivo `main.c`
+
+Este archivo se encargará de recibir el archivo .aggy desde la consola, validar su extensión (como planeamos en el diseño) e inicializar el Scanner para procesar el código. En esta etapa, lo programaremos para que imprima una lista de todos los tokens encontrados; esto nos servirá para comprobar que el Scanner funciona de forma impecable antes de construir el Parser.
+
+### ¿Por qué este código es importante en esta etapa?
+- **Aislamiento de Errores:** Al imprimir los tokens uno por uno en una tabla, puedes crear un archivo de prueba con código en .aggy y ver exactamente si el Scanner está segmentando bien las cadenas de texto antes de complicar el programa con el Parser.
+
+- **Validación de Parámetros:** Protege el sistema mediante el uso de argc e impide que el programa truene con un Segmentation Fault si el usuario olvida pasar el archivo en la consola.
