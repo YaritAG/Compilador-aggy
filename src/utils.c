@@ -13,21 +13,13 @@
 ASTNode *create_node(NodeType type)
 {
     ASTNode *node = (ASTNode *)malloc(sizeof(ASTNode));
-
-    if (node == NULL)
+    if (node != NULL)
     {
-        fprintf(stderr, "[ERROR]: Fallo al asignar memoria para un nuevo nodo.\n");
-        exit(1); // Terminamos si no hay memoria disponible (error crítico)
+        node->type = type;
+        node->left = NULL;
+        node->right = NULL;
+        memset(node->value, 0, sizeof(node->value));
     }
-
-    node->type = type;
-    node->left = NULL;
-    node->right = NULL;
-    node->next = NULL;
-
-    // Inicializamos el valor como una cadena vacía
-    node->value[0] = '\0';
-
     return node;
 }
 
@@ -36,16 +28,15 @@ ASTNode *create_node(NodeType type)
  * Recorrido post-orden para liberar memoria.
  * Primero libera a los hijos, luego al nodo padre para no perder la referencia.
  */
-void free_ast(ASTNode *node)
+void free_ast(ASTNode *node) 
 {
     if (node == NULL)
         return;
 
-    // Liberación recursiva
+    // 1. Liberar hijos primero (recursividad)
     free_ast(node->left);
     free_ast(node->right);
-    free_ast(node->next);
-
-    // Finalmente, liberamos el nodo actual
+    
+    // 2. Liberar el nodo actual
     free(node);
 }
