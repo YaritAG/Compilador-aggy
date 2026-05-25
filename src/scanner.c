@@ -52,20 +52,63 @@ TokenType identify_keyword(char *lexeme)
  * Función: get_next_token
  * El motor del Scanner. Analiza el flujo de caracteres y devuelve el siguiente Token.
  */
+/*
+ * Función: get_next_token
+ * El motor del Scanner. Analiza el flujo de caracteres y devuelve el siguiente Token.
+ */
 Token get_next_token()
 {
     Token token;
     token.line = current_line;
     int c;
 
-    // 1. Ignorar espacios en blanco, tabulaciones y registrar saltos de línea
-    while ((c = fgetc(source_file)) != EOF && isspace(c))
+    // 1. Ignorar espacios en blanco, tabulaciones, registrar saltos de línea Y COMENTARIOS
+    while (1)
     {
-        if (c == '\n')
+        c = fgetc(source_file);
+
+        if (c == EOF)
         {
-            current_line++;
-            token.line = current_line;
+            break;
         }
+
+        if (isspace(c))
+        {
+            if (c == '\n')
+            {
+                current_line++;
+                token.line = current_line;
+            }
+            continue; // Sigue limpiando espacios
+        }
+
+        // ¡AQUÍ ESTÁ EL TRUCO PARA LOS COMENTARIOS!
+        if (c == '/')
+        {
+            int next_c = fgetc(source_file);
+            if (next_c == '/')
+            {
+                // Es un comentario de línea (//), ignoramos todo hasta el '\n' o EOF
+                while ((c = fgetc(source_file)) != '\n' && c != EOF)
+                    ;
+                if (c == '\n')
+                {
+                    current_line++;
+                    token.line = current_line;
+                }
+                continue; // Volver a empezar el bucle para buscar tokens reales
+            }
+            else
+            {
+                // No era un comentario, era una división legítima.
+                // Devolvemos el segundo carácter para no perderlo.
+                ungetc(next_c, source_file);
+                break;
+            }
+        }
+
+        // Si no es espacio ni comentario, salimos del bucle de limpieza
+        break;
     }
 
     // Si llegamos al final del archivo, retornar TOKEN_EOF
@@ -76,6 +119,7 @@ Token get_next_token()
         return token;
     }
 
+    // [AQUÍ SIGUE EXACTAMENTE IGUAL TU CÓDIGO]
     // 2. Estado: Identificadores y Palabras Reservadas
     if (isalpha(c) || c == '_')
     {
@@ -108,7 +152,6 @@ Token get_next_token()
             {
                 if (is_float)
                 {
-                    // Si encuentra un segundo punto, es un error de formato flotante
                     break;
                 }
                 is_float = 1;
@@ -123,7 +166,7 @@ Token get_next_token()
         return token;
     }
 
-    // 4. Estado: Operadores y Delimitadores con Lookahead (Ver un carácter adelante)
+    // 4. Estado: Operadores y Delimitadores con Lookahead
     token.lexeme[0] = c;
     token.lexeme[1] = '\0';
 
@@ -155,7 +198,7 @@ Token get_next_token()
         else
         {
             ungetc(c, source_file);
-            token.type = TOKEN_ERROR; // Un '!' solo no significa nada en .aggy por ahora
+            token.type = TOKEN_ERROR;
         }
         return token;
 
@@ -199,6 +242,9 @@ Token get_next_token()
     case '*':
         token.type = TOKEN_MULT;
         return token;
+
+    // OJO: Este case '/' ahora solo se ejecuta si la diagonal
+    // estaba suelta (para divisiones reales)
     case '/':
         token.type = TOKEN_DIV;
         return token;

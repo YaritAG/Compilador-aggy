@@ -226,26 +226,76 @@ ASTNode *parse_if()
     ASTNode *node = create_node(NODE_IF);
     consume(TOKEN_IF);
     consume(TOKEN_LPAREN);
-    consume(TOKEN_ID);
-    consume(TOKEN_EQ);
-    consume(TOKEN_NUM_INT);
+
+    // 1. Primer operando: Puede ser una variable (ID) o un número
+    if (lookahead.type == TOKEN_ID)
+    {
+        consume(TOKEN_ID);
+    }
+    else if (lookahead.type == TOKEN_NUM_INT)
+    {
+        consume(TOKEN_NUM_INT);
+    }
+    else if (lookahead.type == TOKEN_NUM_FLOAT)
+    {
+        consume(TOKEN_NUM_FLOAT);
+    }
+    else
+    {
+        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un identificador o número en la condición, pero se obtuvo '%s'\n",
+                lookahead.line, lookahead.lexeme);
+        exit(1);
+    }
+
+    // 2. MODIFICACIÓN CRUCIAL: Aceptar cualquier operador relacional
+    if (lookahead.type == TOKEN_EQ || lookahead.type == TOKEN_NEQ ||
+        lookahead.type == TOKEN_LT || lookahead.type == TOKEN_GT ||
+        lookahead.type == TOKEN_LTE || lookahead.type == TOKEN_GTE)
+    {
+        advance(); // Consume el operador relacional que venga (ej: '>')
+    }
+    else
+    {
+        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un operador relacional (==, !=, <, >, <=, >=), pero se obtuvo '%s'\n",
+                lookahead.line, lookahead.lexeme);
+        exit(1);
+    }
+
+    // 3. Segundo operando: Igual, puede ser otra variable o un número
+    if (lookahead.type == TOKEN_ID)
+    {
+        consume(TOKEN_ID);
+    }
+    else if (lookahead.type == TOKEN_NUM_INT)
+    {
+        consume(TOKEN_NUM_INT);
+    }
+    else if (lookahead.type == TOKEN_NUM_FLOAT)
+    {
+        consume(TOKEN_NUM_FLOAT);
+    }
+    else
+    {
+        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un identificador o número después del operador, pero se obtuvo '%s'\n",
+                lookahead.line, lookahead.lexeme);
+        exit(1);
+    }
+
     consume(TOKEN_RPAREN);
     consume(TOKEN_LBRACE);
 
-    // Conectamos las sentencias internas
+    // Bucle para conectar las sentencias internas (este se queda igual)
     ASTNode *last_stmt = NULL;
     while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
     {
         ASTNode *stmt = parse_statement();
 
-        // Si es la primera sentencia, es el hijo izquierdo del IF (o el inicio de la lista)
         if (node->left == NULL)
         {
             node->left = stmt;
         }
         else
         {
-            // Si ya había una, la conectamos en cadena (puedes usar un puntero 'next' si tienes)
             last_stmt->right = stmt;
         }
         last_stmt = stmt;
