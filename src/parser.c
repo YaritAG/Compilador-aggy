@@ -32,7 +32,7 @@ void consume(TokenType expected_type)
 ASTNode *parse_statement();
 ASTNode *parse_declaration();
 ASTNode *parse_assignment();
-ASTNode *parse_expression();
+ASTNode *parse_expression();    
 ASTNode *parse_if();
 
 /* * Regla: <programa> ::= <sentencia>* */
