@@ -25,7 +25,20 @@ El compilador está estructurado para ser modular, facilitando su mantenimiento 
     ├── semantic.c        # Análisis semántico y verificación de tipos
     └── utils.c           # Funciones auxiliares y manejo de memoria
 ```
-    
+
+## Especificación de la Gramática (BNF)
+Esta sección define las reglas de construcción de las sentencias del lenguaje *.aggy.*
+
+```BNF
+<programa>      ::= <sentencia>*
+<sentencia>     ::= <declaracion> | <asignacion> | <bloque> | <if> | <while>
+<declaracion>   ::= ("int" | "float") <identificador> ";"
+<asignacion>    ::= <identificador> "=" <expresion> ";"
+<if>            ::= "if" "(" <expresion> ")" <bloque>
+<bloque>        ::= "{" <sentencia>* "}"
+<expresion>     ::= <termino> (("==" | "!=" | "<" | ">") <termino>)?
+```
+
 # Explicación de la funcionalidad de los códigos
 
 ## Archivo [ast.h](include/ast.h)
