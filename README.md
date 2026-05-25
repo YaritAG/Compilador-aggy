@@ -54,6 +54,11 @@ Este archivo es vital porque aquí es donde "cobran vida" las funciones que decl
 
 Este archivo contiene la implementación real del analizador léxico. Funciona como un Autómata Finito Determinista (AFD) en código, leyendo el archivo fuente carácter por carácter para agruparlos en los tokens que definimos en el diccionario.
 
+### ¿Por qué esta lógica es crucial?
+- **Análisis de dos caracteres (Lookahead):** Al procesar caracteres como =, < o >, el compilador necesita mirar obligatoriamente el siguiente carácter. Si viene otro =, se convierte en comparación (==), de lo contrario se regresa el carácter usando ungetc y se clasifica como una asignación simple.
+
+- **Manejo Dinámico de Flotantes:** El analizador cambia el tipo de token de TOKEN_NUM_INT a TOKEN_NUM_FLOAT de forma automática en cuanto detecta el primer punto decimal ..
+
 ### ¿Por qué este archivo es necesario?
 - **Procesamiento de Flujo Estrecho (ungetc):** Es el encargado de interactuar directamente con el archivo en el disco. Utiliza la función `ungetc()` para "devolver" caracteres al flujo de lectura cuando lee un símbolo de más. Esto es vital para saber, por ejemplo, dónde termina el nombre de una variable sin perder el carácter que sigue (como un espacio o un punto y coma).
 
