@@ -100,3 +100,13 @@ Este archivo se encargará de recibir el archivo .aggy desde la consola, validar
 ## Archivo [Makefile](Makefile)
 
 El Makefile es un archivo de configuración que lee la herramienta make. Le dice al sistema qué archivos compilar, cómo enlazarlos y en qué orden, ahorrándote tiempo cada vez que hagas un cambio.
+
+### *Nota muy importante sobre los Makefiles*
+En las líneas debajo de $(TARGET): $(OBJ), %.o: %.c y clean:, el espacio en blanco al inicio debe ser una tabulación (Tab), no espacios individuales. Si pones espacios, make te lanzará un error de "missing separator".
+
+### ¿Por qué este Makefile está estructurado así?
+- **Wall -Wextra:** Le pide a gcc que active todas las alertas y advertencias posibles. Esto es genial en compiladores porque te avisa si olvidaste usar una variable o si hay un puntero peligroso antes de que el programa falle.
+
+- **Iinclude:** Le dice al compilador que busque los archivos .h directamente dentro de la carpeta include/, permitiéndonos mantener limpio el código.
+
+- **Regla clean:** Te permite escribir make clean en la terminal para borrar todos los archivos binarios temporales y dejar tu carpeta impecable para una compilación limpia.
