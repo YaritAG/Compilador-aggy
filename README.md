@@ -110,3 +110,7 @@ En las líneas debajo de $(TARGET): $(OBJ), %.o: %.c y clean:, el espacio en bla
 - **Iinclude:** Le dice al compilador que busque los archivos .h directamente dentro de la carpeta include/, permitiéndonos mantener limpio el código.
 
 - **Regla clean:** Te permite escribir make clean en la terminal para borrar todos los archivos binarios temporales y dejar tu carpeta impecable para una compilación limpia.
+
+## Archivo [parser.h](include/parser.h)
+
+El Parser es el "cerebro" del compilador. Su trabajo es tomar la lista de tokens y verificar si siguen las reglas de tu lenguaje (la gramática), mientras construye el AST (Árbol de Sintaxis Abstracta).

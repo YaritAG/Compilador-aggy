@@ -1,0 +1,4 @@
+int contador = 10;
+if (contador == 5) {
+    float valor = 3.14;
+}
