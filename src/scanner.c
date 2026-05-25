@@ -43,7 +43,7 @@ TokenType identify_keyword(char *lexeme)
         return TOKEN_INT;
     if (strcmp(lexeme, "float") == 0)
         return TOKEN_FLOAT;
-
+    
     // Si no coincide con ninguna, es un identificador de variable/función creado por el usuario
     return TOKEN_ID;
 }

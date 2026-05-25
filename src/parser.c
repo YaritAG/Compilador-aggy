@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../include/parser.h"
 
 
@@ -14,6 +15,49 @@ void advance()
     lookahead = get_next_token();
 }
 
+// Funcion auxiliar para obtener el nombre legible de un token (útil para mensajes de error)
+const char *get_token_name(TokenType type)
+{
+    switch (type)
+    {
+    case TOKEN_INT:
+        return "int";
+    case TOKEN_FLOAT:
+        return "float";
+    case TOKEN_ID:
+        return "identificador";
+    case TOKEN_ASSIGN:
+        return "=";
+    case TOKEN_NUM_INT:
+        return "número entero";
+    case TOKEN_NUM_FLOAT:
+        return "número flotante";
+        case TOKEN_IF:
+        return "if";
+    case TOKEN_GT:
+        return ">";
+    case TOKEN_LT:
+        return "<";
+    case TOKEN_EQ:
+        return "==";
+    case TOKEN_LBRACE:
+        return "{";
+    case TOKEN_RBRACE:
+        return "}";
+    case TOKEN_LPAREN:
+        return "(";
+    case TOKEN_RPAREN:
+        return ")";
+    case TOKEN_SEMICOLON:
+        return ";";
+    case TOKEN_EOF:
+        return "EOF";
+
+    default:
+        return "desconocido";
+    }
+}
+
 void consume(TokenType expected_type)
 {
     if (lookahead.type == expected_type)
@@ -22,8 +66,8 @@ void consume(TokenType expected_type)
     }
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba token tipo %d, pero se obtuvo %d\n",
-                lookahead.line, expected_type, lookahead.type);
+        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba '%s', pero se obtuvo '%s'\n",
+                lookahead.line, get_token_name(expected_type), lookahead.lexeme);
         exit(1);
     }
 }
@@ -34,21 +78,22 @@ ASTNode *parse_declaration();
 ASTNode *parse_assignment();
 ASTNode *parse_expression();    
 ASTNode *parse_if();
+void parse_condition();
 
 /* * Regla: <programa> ::= <sentencia>* */
 ASTNode *parse_program()
 {
-    advance(); // Carga el primer token
+    advance(); // Carga el primer token (el 'int' de la primera línea)
+
     ASTNode *root = create_node(NODE_BLOCK);
 
+    // Mientras no lleguemos al final, seguimos buscando sentencias
     while (lookahead.type != TOKEN_EOF)
     {
         ASTNode *stmt = parse_statement();
-        if (stmt)
-        {
-            // TODO: Aquí conectarías el nodo stmt al nodo root como hijo
-        }
+        // TODO: Enlazar stmt a root
     }
+
     return root;
 }
 
@@ -58,14 +103,19 @@ ASTNode *parse_statement()
     switch (lookahead.type)
     {
     case TOKEN_IF:
-        return parse_if();
+        return parse_if(); 
+
     case TOKEN_INT:
     case TOKEN_FLOAT:
         return parse_declaration();
+
     case TOKEN_ID:
         return parse_assignment();
+
     default:
-        fprintf(stderr, "[ERROR] Sentencia no reconocida en línea %d: [%s]\n", lookahead.line, lookahead.lexeme);
+        // Aquí es donde el parser "se queja" cuando no sabe qué hacer
+        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba una sentencia, pero se obtuvo '%s'\n",
+                lookahead.line, lookahead.lexeme);
         exit(1);
     }
 }
@@ -74,25 +124,23 @@ ASTNode *parse_statement()
 ASTNode *parse_declaration()
 {
     ASTNode *node = create_node(NODE_DECLARATION);
+    advance(); // Consume int o float
 
-    // 1. Consumimos el tipo (int/float)
-    advance();
-
-    // 2. Intentamos consumir el ID, si no es ID, reportamos error y detenemos
+    // Aquí guardamos el ID
     if (lookahead.type == TOKEN_ID)
     {
         strcpy(node->value, lookahead.lexeme);
         advance();
     }
-    else
+
+    // Consume el '=' y la expresión si existen
+    if (lookahead.type == TOKEN_ASSIGN)
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un identificador después del tipo.\n", lookahead.line);
-        exit(1); // Detenemos la compilación ante un error de sintaxis
+        advance();          // Consume '='
+        parse_expression(); // Consume el valor (10 o 3.14)
     }
 
-    // 3. Consumimos el punto y coma
-    consume(TOKEN_SEMICOLON);
-
+    consume(TOKEN_SEMICOLON); // Consume el ';'
     return node;
 }
 
@@ -128,6 +176,28 @@ ASTNode *parse_assignment()
     return node;
 }
 
+// Función para parsear condiciones dentro de sentencias if o while (en futuras expansiones del lenguaje).
+// Ejemplo de cómo deberías capturar la condición en parse_if:
+void parse_condition()
+{
+    consume(TOKEN_ID); // Identificador (ej. 'a')
+
+    // Aquí validamos cualquier operador relacional
+    if (lookahead.type == TOKEN_GT || lookahead.type == TOKEN_LT ||
+        lookahead.type == TOKEN_GTE || lookahead.type == TOKEN_LTE ||
+        lookahead.type == TOKEN_EQ || lookahead.type == TOKEN_NEQ)
+    {
+        advance(); // Consumimos el operador ('>', '==', etc.)
+    }
+    else
+    {
+        // Si no es ninguno de estos, el error será claro
+        fprintf(stderr, "[ERROR] Se esperaba un operador de comparación, se obtuvo '%s'\n", lookahead.lexeme);
+        exit(1);
+    }
+
+    consume(TOKEN_ID); // O TOKEN_NUM_INT, según lo que permitas
+}
 // parse_expression sirve para parsear tanto números como expresiones más complejas (en futuras expansiones del lenguaje).
 /* * Regla: <expresion> ::= <numero> */
 ASTNode *parse_expression()
@@ -158,10 +228,29 @@ ASTNode *parse_if()
     consume(TOKEN_LPAREN);
     consume(TOKEN_ID);
     consume(TOKEN_EQ);
-    consume(TOKEN_NUM_INT); // O NUM_FLOAT
+    consume(TOKEN_NUM_INT);
     consume(TOKEN_RPAREN);
     consume(TOKEN_LBRACE);
-    // TODO: Parsear cuerpo del if (recursividad)
+
+    // Conectamos las sentencias internas
+    ASTNode *last_stmt = NULL;
+    while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
+    {
+        ASTNode *stmt = parse_statement();
+
+        // Si es la primera sentencia, es el hijo izquierdo del IF (o el inicio de la lista)
+        if (node->left == NULL)
+        {
+            node->left = stmt;
+        }
+        else
+        {
+            // Si ya había una, la conectamos en cadena (puedes usar un puntero 'next' si tienes)
+            last_stmt->right = stmt;
+        }
+        last_stmt = stmt;
+    }
+
     consume(TOKEN_RBRACE);
     return node;
 }

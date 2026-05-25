@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "include/scanner.h"
+#include "include/ast.h"
+#include "include/parser.h"
 
 /*
  * Función: has_valid_extension
@@ -51,6 +53,12 @@ int main(int argc, char *argv[])
 
     // 4. Inicializar el Scanner con el archivo abierto
     init_scanner(file);
+
+    ASTNode *root = parse_program();
+    if (root != NULL)
+    {
+        printf("[SUCCESS] El archivo se ha parseado correctamente.\n");
+    }
 
     // 5. Fase de Prueba: Bucle para imprimir tokens en consola
     Token token;
