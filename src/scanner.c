@@ -240,7 +240,7 @@ Token get_next_token()
         token.type = TOKEN_MINUS;
         return token;
     case '*':
-        token.type = TOKEN_MULT;
+        token.type = TOKEN_MUL;
         return token;
 
     // OJO: Este case '/' ahora solo se ejecuta si la diagonal

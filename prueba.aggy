@@ -1,10 +1,5 @@
-for (i = 0; i < 5; i = i + 1)
-{
-    for (i = 0; i < 5; i = i + 1)
-    {
-        for (i = 0; i < 5; i = i + 1)
-        {
-            
-        }
-    }
+int contador_ciclos_operacion_1;
+contador_ciclos_operacion_1 = 50;
+if (contador_ciclos_operacion_1 == 50) {
+    int temporal_2;
 }

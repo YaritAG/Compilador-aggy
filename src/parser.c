@@ -230,22 +230,43 @@ ASTNode *parse_expression()
 {
     ASTNode *node = create_node(NODE_EXPR);
 
-    // Verificamos si lo que viene es un número (int o float)
-    if (lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT)
+    // 1. Validar el primer operando: Puede ser un número ENTERO, FLOAT o una VARIABLE (TOKEN_ID)
+    if (lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT || lookahead.type == TOKEN_ID)
     {
-        // Guardamos el valor numérico en el nodo
+        // Guardamos el primer valor (ej: la "i" o el "5") en el valor del nodo
         strcpy(node->value, lookahead.lexeme);
-        advance(); // Consumimos el número
+        advance(); // Consumimos el número o la variable
     }
     else
     {
-        fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba un valor numerico.\n", lookahead.line);
+        fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba un valor numerico o una variable.\n", lookahead.line);
         exit(1);
     }
 
+    // 2. Aquí es donde se puede expandir para soportar operaciones más complejas (ej. i + 1, a * b, etc.)
+    // Agregamos soporte para que si ve un operador, no se quede trabado buscando el punto y coma.
+    if (lookahead.type == TOKEN_PLUS || lookahead.type == TOKEN_MINUS ||
+        lookahead.type == TOKEN_MUL || lookahead.type == TOKEN_DIV)
+    {
+        // Guardamos el operador de forma temporal o avanzamos
+        advance(); // Consumimos el operador (+, -, *, /)
+
+        // Validamos el segundo operando (también puede ser número o variable)
+        if (lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT || lookahead.type == TOKEN_ID)
+        {
+            advance(); // Consumimos el segundo operando
+        }
+        else
+        {
+            // Si no es un número o variable válido, el mensaje de error será claro
+            fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba un valor numerico o variable despues del operador.\n", lookahead.line);
+            exit(1);
+        }
+    }
+
+    // 3. Al final, el nodo de expresión tendrá su valor (ej: "i" o "5") y podría expandirse para tener hijos que representen operaciones más complejas.
     return node;
 }
-
 // -----------------------------------------------------------------------------
 /* CONDICION IF*/
 // -----------------------------------------------------------------------------

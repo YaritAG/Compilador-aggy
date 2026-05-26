@@ -16,7 +16,7 @@ typedef enum
     TOKEN_ASSIGN,
     TOKEN_PLUS,
     TOKEN_MINUS,
-    TOKEN_MULT,
+    TOKEN_MUL,
     TOKEN_DIV,
     TOKEN_LT,
     TOKEN_GT,
