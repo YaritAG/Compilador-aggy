@@ -58,26 +58,37 @@ const char *get_token_name(TokenType type)
     }
 }
 
+// Función para consumir un token esperado y avanzar, o reportar un error si no coincide.
 void consume(TokenType expected_type)
 {
+    // Si el token actual coincide con el tipo esperado, avanzamos al siguiente token.
     if (lookahead.type == expected_type)
     {
         advance();
     }
+
+    // Si el token no coincide, reportamos un error sintáctico con detalles claros.
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba '%s', pero se obtuvo '%s'\n",
+        // El mensaje de error incluye la línea, el token esperado (en formato legible) y el token real que se encontró.
+        fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba '%s', pero se obtuvo '%s'\n",
                 lookahead.line, get_token_name(expected_type), lookahead.lexeme);
         exit(1);
     }
 }
 
 // Prototipos de funciones gramaticales
+// Estos sirven para organizar el código y evitar warnings de funciones no declaradas.
+
 ASTNode *parse_statement();
 ASTNode *parse_declaration();
 ASTNode *parse_assignment();
 ASTNode *parse_expression();    
 ASTNode *parse_if();
+ASTNode *parse_for();
+ASTNode *parse_while();
+ASTNode *parse_do_while();
+
 void parse_condition();
 
 /* * Regla: <programa> ::= <sentencia>* */
@@ -129,7 +140,7 @@ ASTNode *parse_statement()
         return parse_assignment();
 
     default:
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba una sentencia, pero se obtuvo '%s'\n",
+        fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba una sentencia, pero se obtuvo '%s'\n",
                 lookahead.line, lookahead.lexeme);
         exit(1);
     }
@@ -173,7 +184,7 @@ ASTNode *parse_assignment()
     }
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un identificador.\n", lookahead.line);
+        fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba un identificador.\n", lookahead.line);
         exit(1);
     }
 
@@ -207,7 +218,7 @@ void parse_condition()
     else
     {
         // Si no es ninguno de estos, el error será claro
-        fprintf(stderr, "[ERROR] Se esperaba un operador de comparación, se obtuvo '%s'\n", lookahead.lexeme);
+        fprintf(stderr, "[ERROR] Se esperaba un operador de comparacion, se obtuvo '%s'\n", lookahead.lexeme);
         exit(1);
     }
 
@@ -228,12 +239,16 @@ ASTNode *parse_expression()
     }
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un valor numérico.\n", lookahead.line);
+        fprintf(stderr, "[ERROR] Sintactico en linea %d: Se esperaba un valor numerico.\n", lookahead.line);
         exit(1);
     }
 
     return node;
 }
+
+// -----------------------------------------------------------------------------
+/* CONDICION IF*/
+// -----------------------------------------------------------------------------
 
 /* * Regla: <if> ::= "if" "(" <id> "==" <valor> ")" <bloque> */
 // el parse_if es el encargado de construir toda la estructura del if-else, incluyendo la condición y los bloques internos.
@@ -250,7 +265,7 @@ ASTNode *parse_if()
     else
     {
         // Si no es un ID o número válido, el mensaje de error será claro
-        fprintf(stderr, "[ERROR] Error en condición IF\n");
+        fprintf(stderr, "[ERROR] Error en condicion IF\n");
         exit(1);
     }
 
@@ -272,7 +287,7 @@ ASTNode *parse_if()
     else
     {
         // Si no es un ID o número válido, el mensaje de error será claro
-        fprintf(stderr, "[ERROR] Error en condición IF\n");
+        fprintf(stderr, "[ERROR] Error en condicion IF\n");
         exit(1);
     }
 
@@ -339,5 +354,170 @@ ASTNode *parse_if()
     }
 
     // Al final, el nodo IF tendrá su condición y su bloque de sentencias correctamente estructurados en el árbol.
+    return node;
+}
+
+// -----------------------------------------------------------------------------
+/* BUCLE DO-WHILE*/
+// -----------------------------------------------------------------------------
+ASTNode *parse_do_while()
+{
+    // El nodo DO_WHILE será el padre de toda la estructura del do-while
+    ASTNode *node = create_node(NODE_DO_WHILE);
+    // Consumimos el 'do' y la llave de apertura del bloque del do-while
+    consume(TOKEN_DO);
+    consume(TOKEN_LBRACE);
+
+    // Cuerpo del DO
+    ASTNode *last_stmt = NULL;
+    // Mientras no lleguemos al cierre de llave, seguimos parseando sentencias dentro del bloque del DO
+    while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
+    {
+        // Cada sentencia dentro del bloque del DO se convierte en un nodo hijo del nodo DO_WHILE.
+        ASTNode *stmt = parse_statement();
+        if (node->left == NULL)
+            node->left = stmt;
+        
+        // Para las siguientes sentencias, las enlazamos a la derecha del último nodo agregado.
+        else
+            last_stmt->right = stmt;
+        last_stmt = stmt;
+    }
+
+    // Consumimos la llave de cierre del bloque del DO
+    consume(TOKEN_RBRACE);
+
+    // Condición final del WHILE
+    consume(TOKEN_WHILE);
+    consume(TOKEN_LPAREN);
+    advance();
+    advance();
+    advance(); // Condición sintáctica
+    consume(TOKEN_RPAREN);
+    consume(TOKEN_SEMICOLON); // El do-while obliga un ';' al final
+
+    // Al final, el nodo DO_WHILE tendrá su bloque de sentencias en el hijo izquierdo y la condición (en futuras expansiones) podría almacenarse en un campo específico del nodo.
+    return node;
+}
+
+// -----------------------------------------------------------------------------
+/* BUCLE FOR */
+// -----------------------------------------------------------------------------
+ASTNode *parse_for()
+{
+    // El nodo FOR será el padre de toda la estructura del for
+    ASTNode *node = create_node(NODE_FOR);
+    consume(TOKEN_FOR);
+    consume(TOKEN_LPAREN);
+
+    // 1. Inicialización (Ej: i = 0;)
+    parse_assignment(); // Llama a tu función que ya procesa "i = 0;" (ya consume el ';')
+
+    // 2. Condición (Ej: i < 10)
+    // Aquí validamos la condición del for (ej. i < 10)
+    advance();
+    advance();
+    advance(); // Condición sintáctica relacional
+    consume(TOKEN_SEMICOLON);
+
+    // 3. Incremento (Ej: i = i + 1)
+    // Para el incremento, simplemente avanzamos hasta el cierre del paréntesis, ya que no es obligatorio procesar su estructura interna para este ejemplo.    
+    while (lookahead.type != TOKEN_RPAREN && lookahead.type != TOKEN_EOF)
+    {
+        // Avanzamos hasta el cierre del paréntesis, sin necesidad de procesar su estructura interna para este ejemplo.
+        advance();
+    }
+    // Consumimos el cierre del paréntesis del for
+    consume(TOKEN_RPAREN);
+    consume(TOKEN_LBRACE);
+
+    // Cuerpo del FOR
+    ASTNode *last_stmt = NULL;
+
+    // Mientras no lleguemos al cierre de llave, seguimos parseando sentencias dentro del bloque del FOR
+    while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
+    {
+        // Cada sentencia dentro del bloque del FOR se convierte en un nodo hijo del nodo FOR.
+        ASTNode *stmt = parse_statement();
+        if (node->left == NULL)
+            node->left = stmt;
+        // Para las siguientes sentencias, las enlazamos a la derecha del último nodo agregado.
+        else
+            last_stmt->right = stmt;
+        last_stmt = stmt;
+    }
+    // Consumimos la llave de cierre del bloque del FOR
+    consume(TOKEN_RBRACE);
+    return node;
+}
+
+// -----------------------------------------------------------------------------
+/* BUCLE WHILE */
+// -----------------------------------------------------------------------------
+ASTNode *parse_while()
+{
+    // El nodo WHILE será el padre de toda la estructura del while
+    ASTNode *node = create_node(NODE_WHILE);
+    consume(TOKEN_WHILE);
+    consume(TOKEN_LPAREN);
+
+    // Validación sintáctica simple de la condición (Ej: i < 5)
+    if (lookahead.type == TOKEN_ID || lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT)
+        advance();
+    // Si no es un ID o número válido, el mensaje de error será claro
+    else
+    {
+        // Si no es un ID o número válido, el mensaje de error será claro
+        fprintf(stderr, "[ERROR] Error en condicion WHILE\n");
+        exit(1);
+    }
+
+    // Validamos el operador relacional (==, !=, >, <, >=, <=)
+    if (lookahead.type == TOKEN_EQ || lookahead.type == TOKEN_NEQ ||
+        lookahead.type == TOKEN_LT || lookahead.type == TOKEN_GT ||
+        lookahead.type == TOKEN_LTE || lookahead.type == TOKEN_GTE)
+        // Si no es un operador relacional válido, el mensaje de error será claro
+        advance();
+    // Validamos el segundo operando de la condición (puede ser un ID o un número)
+    else
+    {
+        // Si no es un operador relacional válido, el mensaje de error será claro
+        fprintf(stderr, "[ERROR] Se esperaba operador relacional en WHILE\n");
+        exit(1);
+    }
+
+    // Validamos el segundo operando de la condición (puede ser un ID o un número)
+    if (lookahead.type == TOKEN_ID || lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT)
+        // Si no es un ID o número válido, el mensaje de error será claro
+        advance();
+    // Consumimos el cierre del paréntesis de la condición    
+    else
+    {
+        // Si no es un ID o número válido, el mensaje de error será claro
+        fprintf(stderr, "[ERROR] Error en condicion WHILE\n");
+        exit(1);
+    }
+
+    // Consumimos el cierre del paréntesis del while
+    consume(TOKEN_RPAREN);
+    //  Consumimos la llave de apertura del bloque del while
+    consume(TOKEN_LBRACE);
+
+    // Cuerpo del WHILE (Estructura recursiva para soportar anidamiento)
+    ASTNode *last_stmt = NULL;
+    // Mientras no lleguemos al cierre de llave, seguimos parseando sentencias dentro del bloque del WHILE
+    while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
+    {
+        // Cada sentencia dentro del bloque del WHILE se convierte en un nodo hijo del nodo WHILE.
+        ASTNode *stmt = parse_statement();
+        if (node->left == NULL)
+            node->left = stmt;
+        // Para las siguientes sentencias, las enlazamos a la derecha del último nodo agregado.
+        else
+            last_stmt->right = stmt;
+        last_stmt = stmt;
+    }
+    // Consumimos la llave de cierre del bloque del WHILE
+    consume(TOKEN_RBRACE);
     return node;
 }
