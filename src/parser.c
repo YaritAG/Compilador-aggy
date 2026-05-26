@@ -98,12 +98,28 @@ ASTNode *parse_program()
 }
 
 /* * Regla: Selector de sentencias */
+/*
+    * Aquí es donde se decide qué tipo de sentencia estamos parseando.
+    * Dependiendo del token que veamos, llamaremos a la función de parseo correspondiente
+    * El parse_statement se convierte en el "cerebro" del parser, ya que es el punto de entrada para todas las sentencias.
+    * En pocas palabras, es el encargado de dirigir el flujo del análisis sintáctico hacia la función correcta según el token que se encuentre.
+    * POr ende, es crucial que este selector esté bien implementado para que el parser funcione correctamente y pueda manejar todas las estructuras del lenguaje.
+*/
 ASTNode *parse_statement()
 {
     switch (lookahead.type)
     {
     case TOKEN_IF:
-        return parse_if(); 
+        return parse_if();
+
+    case TOKEN_FOR:
+        return parse_for();
+
+    case TOKEN_WHILE: 
+        return parse_while();
+
+    case TOKEN_DO:
+        return parse_do_while();
 
     case TOKEN_INT:
     case TOKEN_FLOAT:
@@ -113,7 +129,6 @@ ASTNode *parse_statement()
         return parse_assignment();
 
     default:
-        // Aquí es donde el parser "se queja" cuando no sabe qué hacer
         fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba una sentencia, pero se obtuvo '%s'\n",
                 lookahead.line, lookahead.lexeme);
         exit(1);
@@ -221,86 +236,108 @@ ASTNode *parse_expression()
 }
 
 /* * Regla: <if> ::= "if" "(" <id> "==" <valor> ")" <bloque> */
+// el parse_if es el encargado de construir toda la estructura del if-else, incluyendo la condición y los bloques internos.
 ASTNode *parse_if()
 {
+    // Creamos el nodo IF, que será el padre de toda la estructura del if-else
     ASTNode *node = create_node(NODE_IF);
     consume(TOKEN_IF);
     consume(TOKEN_LPAREN);
 
-    // 1. Primer operando: Puede ser una variable (ID) o un número
-    if (lookahead.type == TOKEN_ID)
-    {
-        consume(TOKEN_ID);
-    }
-    else if (lookahead.type == TOKEN_NUM_INT)
-    {
-        consume(TOKEN_NUM_INT);
-    }
-    else if (lookahead.type == TOKEN_NUM_FLOAT)
-    {
-        consume(TOKEN_NUM_FLOAT);
-    }
+    // Aquí validamos la condición del if (ej. a == 10)
+    if (lookahead.type == TOKEN_ID || lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT)
+        advance();
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un identificador o número en la condición, pero se obtuvo '%s'\n",
-                lookahead.line, lookahead.lexeme);
+        // Si no es un ID o número válido, el mensaje de error será claro
+        fprintf(stderr, "[ERROR] Error en condición IF\n");
         exit(1);
     }
 
-    // 2. MODIFICACIÓN CRUCIAL: Aceptar cualquier operador relacional
+    // Validamos el operador relacional (==, !=, >, <, >=, <=)
     if (lookahead.type == TOKEN_EQ || lookahead.type == TOKEN_NEQ ||
         lookahead.type == TOKEN_LT || lookahead.type == TOKEN_GT ||
         lookahead.type == TOKEN_LTE || lookahead.type == TOKEN_GTE)
-    {
-        advance(); // Consume el operador relacional que venga (ej: '>')
-    }
+        advance();
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un operador relacional (==, !=, <, >, <=, >=), pero se obtuvo '%s'\n",
-                lookahead.line, lookahead.lexeme);
+        // Si no es un operador relacional válido, el mensaje de error será claro
+        fprintf(stderr, "[ERROR] Se esperaba operador relacional\n");
         exit(1);
     }
 
-    // 3. Segundo operando: Igual, puede ser otra variable o un número
-    if (lookahead.type == TOKEN_ID)
-    {
-        consume(TOKEN_ID);
-    }
-    else if (lookahead.type == TOKEN_NUM_INT)
-    {
-        consume(TOKEN_NUM_INT);
-    }
-    else if (lookahead.type == TOKEN_NUM_FLOAT)
-    {
-        consume(TOKEN_NUM_FLOAT);
-    }
+    // Validamos el segundo operando de la condición (puede ser un ID o un número)
+    if (lookahead.type == TOKEN_ID || lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT)
+        advance();
     else
     {
-        fprintf(stderr, "[ERROR] Sintáctico en línea %d: Se esperaba un identificador o número después del operador, pero se obtuvo '%s'\n",
-                lookahead.line, lookahead.lexeme);
+        // Si no es un ID o número válido, el mensaje de error será claro
+        fprintf(stderr, "[ERROR] Error en condición IF\n");
         exit(1);
     }
 
+    // Consumimos el cierre del paréntesis de la condición
+    // Si el lookahead no es un TOKEN_RPAREN, el mensaje de error será claro
     consume(TOKEN_RPAREN);
     consume(TOKEN_LBRACE);
 
-    // Bucle para conectar las sentencias internas (este se queda igual)
+    // Bloque interno del IF (Hijo izquierdo)
+    // Aquí es donde se construye la estructura jerárquica del árbol.
     ASTNode *last_stmt = NULL;
+
+    // Mientras no lleguemos al cierre de llave, seguimos parseando sentencias dentro del bloque del IF
     while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
     {
+        // Cada sentencia dentro del bloque del IF se convierte en un nodo hijo del nodo IF.
         ASTNode *stmt = parse_statement();
-
+        
+        // Si el nodo IF no tiene un hijo izquierdo, asignamos la primera sentencia ahí.
         if (node->left == NULL)
-        {
             node->left = stmt;
-        }
+        
+        // Para las siguientes sentencias, las enlazamos a la derecha del último nodo agregado.
         else
-        {
             last_stmt->right = stmt;
-        }
         last_stmt = stmt;
     }
 
+    // Consumimos la llave de cierre del bloque del IF
     consume(TOKEN_RBRACE);
+
+    // --- AQUÍ SE SOPORTA ELSE Y ELSE IF ---
+    if (lookahead.type == TOKEN_ELSE)
+    {
+        consume(TOKEN_ELSE);
+        if (lookahead.type == TOKEN_IF)
+        {
+            // Es un 'else if', encadenamos recursivamente llamando a parse_if()
+            node->right = parse_if();
+        }
+        else
+        {
+            // Es un 'else' normal, abrimos llave y procesamos su bloque
+            consume(TOKEN_LBRACE);
+            ASTNode *else_last = NULL;
+
+            // Mientras no lleguemos al cierre de llave, seguimos parseando sentencias dentro del bloque del ELSE
+            while (lookahead.type != TOKEN_RBRACE && lookahead.type != TOKEN_EOF)
+            {
+                // Cada sentencia dentro del bloque del ELSE se convierte en un nodo hijo del nodo ELSE (que es el hijo derecho del IF).
+                ASTNode *stmt = parse_statement();
+                if (node->right == NULL)
+                    node->right = stmt;
+
+                // Para las siguientes sentencias, las enlazamos a la derecha del último nodo agregado en el bloque del ELSE.
+                else
+                    else_last->right = stmt;
+                else_last = stmt;
+            }
+
+            // Consumimos la llave de cierre del bloque del ELSE
+            consume(TOKEN_RBRACE);
+        }
+    }
+
+    // Al final, el nodo IF tendrá su condición y su bloque de sentencias correctamente estructurados en el árbol.
     return node;
 }

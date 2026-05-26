@@ -9,6 +9,7 @@
 #include "include/scanner.h"
 #include "include/ast.h"
 #include "include/parser.h"
+#include <windows.h> 
 
 /*
  * Función: has_valid_extension
@@ -24,6 +25,8 @@ int has_valid_extension(const char *filename)
 
 int main(int argc, char *argv[])
 {
+    // UTF-8 para que los mensajes de error con acentos se muestren correctamente en la consola de Windows
+    SetConsoleOutputCP(CP_UTF8);
     // 1. Validar que el usuario haya proporcionado el archivo fuente
     if (argc < 2)
     {
