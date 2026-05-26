@@ -9,6 +9,7 @@
 #include "include/scanner.h"
 #include "include/ast.h"
 #include "include/parser.h"
+#include "include/semantic.h" // Conectamos el Header Nuevo unificado
 
 /*
  * Función: has_valid_extension
@@ -36,7 +37,7 @@ int main(int argc, char *argv[])
     // 2. Validar la extensión del archivo (.aggy)
     if (!has_valid_extension(filename))
     {
-        fprintf(stderr, "[ERROR] El archivo '%s' no tiene la extensión válida '.aggy'\n", filename);
+        fprintf(stderr, "[ERROR] El archivo '%s' no tiene la extension valida '.aggy'\n", filename);
         return 1;
     }
 
@@ -54,33 +55,33 @@ int main(int argc, char *argv[])
     // 4. Inicializar el Scanner con el archivo abierto
     init_scanner(file);
 
+    // 5. Fase 1 y 2: Análisis Léxico y Sintáctico (Construcción del AST)
     ASTNode *root = parse_program();
+
     if (root != NULL)
     {
         printf("[SUCCESS] El archivo se ha parseado correctamente.\n");
+        printf("[INFO] Analisis lexico y sintactico finalizado con exito.\n");
+        printf("-----------------------------------------\n");
+
+        // 6. Fase 3: Análisis Semántico (NUEVO)
+        printf("[INFO] Iniciando analisis semantico...\n");
+
+        analyze_semantics(root); // Recorremos el árbol buscando errores de lógica
+
+        printf("[SUCCESS] Analisis semantico finalizado sin errores.\n");
+        printf("-----------------------------------------\n");
+    }
+    else
+    {
+        fprintf(stderr, "[ERROR] No se pudo generar el Arbol de Sintaxis Abstracta (AST).\n");
+        fclose(file);
+        return 1;
     }
 
-    // 5. Fase de Prueba: Bucle para imprimir tokens en consola
-    Token token;
-    do
-    {
-        token = get_next_token();
-
-        // Imprimimos el tipo numérico del token, su línea y el lexema real
-        printf("Línea %d | Tipo Token: %2d | Lexema: [%s]\n",
-               token.line, token.type, token.lexeme);
-
-        if (token.type == TOKEN_ERROR)
-        {
-            fprintf(stderr, "[LEXICAL ERROR] Carácter no reconocido en la línea %d\n", token.line);
-        }
-
-    } while (token.type != TOKEN_EOF);
-
-    printf("-----------------------------------------\n");
-    printf("[INFO] Análisis léxico finalizado con éxito.\n");
-
-    // 6. Cerrar el flujo del archivo de forma segura
+    // 7. Cerrar el flujo del archivo y limpiar la memoria de la Tabla de Símbolos
     fclose(file);
+    free_symbol_table(); // Evitamos fugas de memoria limpiando la lista ligada
+
     return 0;
 }
