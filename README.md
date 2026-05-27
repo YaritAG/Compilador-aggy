@@ -127,3 +127,49 @@ En las líneas debajo de $(TARGET): $(OBJ), %.o: %.c y clean:, el espacio en bla
 ## Archivo [parser.h](include/parser.h)
 
 El Parser es el "cerebro" del compilador. Su trabajo es tomar la lista de tokens y verificar si siguen las reglas de tu lenguaje (la gramática), mientras construye el AST (Árbol de Sintaxis Abstracta).
+
+## Archivo [parser.c](src/parser.c)
+
+Este archivo es el verdadero "cerebro" del compilador. Mientras que el Scanner solo corta el texto en pedazos, el Parser se encarga de darle sentido y verificar que las piezas formen una estructura gramaticalmente válida en el lenguaje `.aggy`. Utiliza un enfoque de "descenso recursivo", lo que significa que el código va analizando la jerarquía de las sentencias paso a paso para construir el Árbol de Sintaxis Abstracta (AST).
+
+La magia de este archivo radica en su capacidad de enrutar y delegar. Por ejemplo, la función `parse_statement()` actúa como un semáforo inteligente: lee el token actual e inmediatamente sabe si debe llamar a la lógica de un bucle, un condicional o una asignación. 
+
+Un detalle técnico vital que implementamos para darle robustez al lenguaje está en la evaluación de expresiones matemáticas. En lugar de limitar las operaciones a simples números, el parser es capaz de entender variables dentro de las operaciones:
+
+```c
+// Dentro de parse_expression()
+if (lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT || lookahead.type == TOKEN_ID)
+```
+
+Al incluir `TOKEN_ID` en esta validación, el compilador permite asignaciones reales y dinámicas como `i = i + 1;`, demostrando que no solo valida números crudos, sino que entiende que un identificador también es un valor válido en tiempo de ejecución.
+
+## Archivo [semantic.h](include/semantic.h)
+
+Si el Parser revisa que la gramática esté bien escrita, la fase semántica revisa que el código tenga sentido lógico. Este archivo de cabecera es fundamental porque define la arquitectura de nuestra **Tabla de Símbolos**, la cual funciona como la memoria a corto plazo del compilador.
+
+Para gestionar las variables que el usuario declara de forma eficiente, optamos por no usar un arreglo estático con un límite fijo, sino una **lista ligada dinámica**:
+
+```c
+typedef struct Symbol {
+    char name[50];       
+    int type;            
+    struct Symbol *next; // Puntero al siguiente símbolo (lista ligada)
+} Symbol;
+```
+
+Esta decisión de diseño (`*next`) es clave porque permite que el programa escale. El compilador puede registrar tantas variables como la memoria de la computadora lo permita, conectándolas una tras otra sin desperdiciar recursos ni desbordar arreglos predefinidos.
+
+## Archivo [semantic.c](src/semantic.c)
+
+Aquí es donde las reglas del juego de `.aggy` se hacen cumplir. Este archivo contiene la implementación de la Tabla de Símbolos y es el encargado de proteger al programa de errores lógicos comunes, como intentar usar una variable que no existe o declarar dos veces la misma caja de memoria.
+
+El flujo de seguridad de este módulo es muy estricto. Antes de registrar cualquier variable nueva en la memoria, la función `insert_symbol` actúa como un filtro que interroga a la tabla mediante `lookup_symbol`:
+
+```c
+if (lookup_symbol(name) != NULL) {
+    fprintf(stderr, "[ERROR Semantico]: La variable '%s' ya ha sido declarada.\n", name);
+    exit(1);
+}
+```
+
+Al hacer este chequeo de validación (early exit), nos aseguramos de detener la compilación inmediatamente y avisarle al programador exactamente qué variable causó el conflicto, evitando comportamientos indefinidos más adelante. Además, el archivo incluye una función de limpieza profunda (`free_symbol_table`) que recorre toda la lista ligada liberando los nodos con `free()`, garantizando que el compilador sea una herramienta limpia que no deja fugas de memoria en el sistema operativo.
