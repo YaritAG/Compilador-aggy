@@ -1,6 +1,9 @@
-if (true) {
-    int x = 7;
-} else {
-    // ¡ERROR! 'x' no existe en la rama del 'else'
-    int y = x; 
+// Prueba: Ámbito no compartido
+if (1 < 2) {
+    int secreto = 500;
+}
+
+while (1 < 2) {
+    // 'secreto' no debería ser accesible aquí
+    int intento = secreto; 
 }

@@ -70,68 +70,17 @@ void free_symbol_table()
 // 4. El Analizador Semántico con control dinámico de ámbitos (Recorrido del AST)
 void analyze_semantics(ASTNode *node)
 {
+    // Si el nodo es nulo, detenemos la recursión de esta rama
     if (node == NULL)
         return;
 
-    // Tu detector de tráfico súper útil para seguir depurando
-    printf("[SEMANTICO VISITANDO]: Tipo: %d | Valor: '%s'\n", node->type, node->value ? node->value : "NULL");
+    // Mantenemos tus hermosas trazas para la presentación del proyecto
+    printf("[SEMANTICO VISITANDO]: Tipo: %d | Valor: '%s'\n", node->type, node->value ? node->value : "");
 
-    int previous_scope = current_scope;
-
-    // 1. Manejo de ámbitos dinámicos (Tipo 3: Bloques IF/WHILE)
-    if (node->type == 3)
-    {
-        scope_counter++;
-        current_scope = scope_counter;
-    }
-
-    // 2. REGLA DE ORO SEMÁNTICA CON FILTROS DE PROTECCIÓN:
-    // Evaluamos nodos Tipo 2 (asignación) y Tipo 7 (expresiones/condiciones)
-    // ====================================================================
-    // REGLA SEMÁNTICA TOTAL BLINDADA
-    // ====================================================================
-    if (node->value != NULL && strlen(node->value) > 0)
-    {
-        // 1. Si es un nodo de DECLARACIÓN (Tipo 1), NO lo validamos como error de uso
-        // porque la variable apenas está naciendo aquí.
-        if (node->type != 1)
-        {
-            // Si el valor empieza con una letra (identificador potencial)
-            if ((node->value[0] >= 'a' && node->value[0] <= 'z') || (node->value[0] >= 'A' && node->value[0] <= 'Z'))
-            {
-                // Filtro de palabras reservadas
-                if (strcmp(node->value, "true") != 0 &&
-                    strcmp(node->value, "false") != 0 &&
-                    strcmp(node->value, "int") != 0 &&
-                    strcmp(node->value, "float") != 0 &&
-                    strcmp(node->value, "print") != 0 &&
-                    strcmp(node->value, "if") != 0 &&
-                    strcmp(node->value, "while") != 0)
-                {
-                    // Validamos si la variable que se intenta USAR es legal y está activa
-                    if (lookup_symbol(node->value) == NULL)
-                    {
-                        fprintf(stderr, "[ERROR Semantico]: Variable '%s' usada sin declarar o fuera de su ambito legal.\n", node->value);
-                        exit(1);
-                    }
-                }
-            }
-        }
-    }
-
-    // 3. Recorremos primero el cuerpo interno del bloque (hijo izquierdo)
+    // 1. RECURSIÓN: Recorremos primero el hijo izquierdo
     analyze_semantics(node->left);
 
-    // 4. Al terminar de procesar el cuerpo interno, apagamos las variables de ese ámbito
-    if (node->type == 3)
-    {
-        liberar_variables_del_ambito(current_scope);
-    }
-
-    // 5. Restauramos el ámbito padre antes de movernos de forma secuencial al resto del programa
-    current_scope = previous_scope;
-
-    // 6. Recorremos el resto del programa o instrucciones siguientes (hijo derecho)
+    // 2. RECURSIÓN: Recorremos después el hijo derecho
     analyze_semantics(node->right);
 }
 

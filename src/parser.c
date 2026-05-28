@@ -331,7 +331,20 @@ ASTNode *parse_expression()
     else if (lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT ||
              lookahead.type == TOKEN_ID || lookahead.type == TOKEN_TRUE || lookahead.type == TOKEN_FALSE)
     {
-        // Creamos un nodo hoja para el operando
+        // ====================================================================
+        // HACK SEMÁNTICO SUPREMO: Validación en Caliente desde el Parser
+        // ====================================================================
+        if (lookahead.type == TOKEN_ID)
+        {
+            // Validamos inmediatamente si la variable existe y está activa en el ámbito actual
+            if (lookup_symbol(lookahead.lexeme) == NULL)
+            {
+                fprintf(stderr, "[ERROR Semantico]: Variable '%s' usada sin declarar o fuera de su ambito legal.\n", lookahead.lexeme);
+                exit(1);
+            }
+        }
+
+        // Continúa con la creación normal del nodo
         node = create_node(NODE_EXPR);
         strcpy(node->value, lookahead.lexeme);
         advance();
