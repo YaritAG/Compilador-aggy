@@ -23,10 +23,11 @@ typedef enum
 // Cada nodo del AST tiene un tipo, punteros a sus hijos (izquierdo y derecho) y un campo para almacenar valores (como identificadores o números).
 typedef struct ASTNode
 {
-    NodeType type;
+    int type;
+    char value[100];
     struct ASTNode *left;
     struct ASTNode *right;
-    char value[32]; // Para guardar identificadores o números
+    int scope_id; // <-- AGREGA ESTA LÍNEA si no existe
 } ASTNode;
 
 // Funciones para crear nodos y liberar memoria del AST.

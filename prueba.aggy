@@ -1,8 +1,6 @@
-int edad = 20;
-
-if (edad >= 18) {
-    bool es_mayor = true; // Nace y muere en el ámbito 1
-    print(es_mayor);
+if (true) {
+    int x = 7;
+} else {
+    // ¡ERROR! 'x' no existe en la rama del 'else'
+    int y = x; 
 }
-
-print(es_mayor); // ¡ERROR SEMÁNTICO! 'es_mayor' no existe en el ámbito 0.

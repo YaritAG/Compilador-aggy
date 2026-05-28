@@ -11,10 +11,11 @@ typedef struct ASTNode ASTNode;
 // Estructura para un símbolo (variable) en la tabla
 typedef struct Symbol
 {
-    char name[50];       // Nombre de la variable (Ej: "i", "total")
+    char name[100];
     int type;
-    int scope_id;        // ID del ámbito (0 para global, 1 para local)
-    struct Symbol *next; // Puntero al siguiente símbolo (lista ligada)
+    int scope_id;
+    int active; 
+    struct Symbol *next;
 } Symbol;
 
 extern int current_scope;

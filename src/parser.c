@@ -237,7 +237,16 @@ ASTNode *parse_declaration()
     if (lookahead.type == TOKEN_ASSIGN)
     {
         advance();
-        parse_expression(); // Procesará el '0', '10.5' o 'true' (si true/false se manejan como expresiones básicas o IDs)
+
+        // ¡LA CORRECCIÓN CRUCIAL!: Atrapamos el árbol de la derecha
+        // y lo colgamos como hijo izquierdo del nodo de declaración.
+        node->left = parse_expression();
+    }
+    else
+    {
+        // Por buena práctica, si no hay asignación (ej: int x;),
+        // aseguramos que el hijo sea NULL.
+        node->left = NULL;
     }
 
     consume(TOKEN_SEMICOLON);
@@ -342,22 +351,25 @@ ASTNode *parse_expression()
         node = not_node;       // El nodo principal ahora es la negación
     }
 
-    // 2. EL BUCLE DE OPERADORES: Agregamos TOKEN_AND y TOKEN_OR a la fiesta
+    // 2. EL BUCLE DE OPERADORES: Procesamiento binario seguro
     while (lookahead.type == TOKEN_PLUS || lookahead.type == TOKEN_MINUS ||
            lookahead.type == TOKEN_MUL || lookahead.type == TOKEN_DIV ||
            lookahead.type == TOKEN_LT || lookahead.type == TOKEN_GT ||
            lookahead.type == TOKEN_EQ || lookahead.type == TOKEN_NEQ ||
            lookahead.type == TOKEN_LTE || lookahead.type == TOKEN_GTE ||
-           lookahead.type == TOKEN_AND || lookahead.type == TOKEN_OR) // <-- ¡NUEVOS OPERADORES!
+           lookahead.type == TOKEN_AND || lookahead.type == TOKEN_OR)
     {
-        // Creamos un nuevo nodo para el operador
+        // A. Creamos el nodo del operador y guardamos su símbolo ANTES de avanzar
         ASTNode *op_node = create_node(NODE_EXPR);
-        strcpy(op_node->value, lookahead.lexeme); // Guardamos el operador (+, &&, ||, etc.)
+        strcpy(op_node->value, lookahead.lexeme);
+
+        // Lo que ya teníamos acumulado a la izquierda se vuelve su hijo izquierdo
+        op_node->left = node;
+
+        // Avanzamos el operador de forma segura. Ahora lookahead apunta al operando derecho
         advance();
 
-        op_node->left = node; // Lo que ya teníamos se convierte en el hijo izquierdo
-
-        // Validamos si el operando de la derecha viene con una negación (ej: a && !b)
+        // B. Validamos si el operando de la derecha viene con una negación (ej: x + !y)
         bool right_tiene_not = false;
         if (lookahead.type == TOKEN_NOT)
         {
@@ -365,7 +377,7 @@ ASTNode *parse_expression()
             right_tiene_not = true;
         }
 
-        // Evaluamos el siguiente término a la derecha
+        // C. Procesamos de forma limpia el operando derecho
         ASTNode *right_node = NULL;
         if (lookahead.type == TOKEN_LPAREN)
         {
@@ -377,8 +389,8 @@ ASTNode *parse_expression()
                  lookahead.type == TOKEN_ID || lookahead.type == TOKEN_TRUE || lookahead.type == TOKEN_FALSE)
         {
             right_node = create_node(NODE_EXPR);
-            strcpy(right_node->value, lookahead.lexeme);
-            advance();
+            strcpy(right_node->value, lookahead.lexeme); // Aquí captura 'zombi' con éxito
+            advance();                                   // Avanza al siguiente token (ej: el ';')
         }
         else
         {
@@ -386,7 +398,7 @@ ASTNode *parse_expression()
             exit(1);
         }
 
-        // Si el operando derecho venía negado, lo envolvemos antes de colgarlo en el operador principal
+        // D. Si el derecho venía negado, lo envolvemos antes de colgarlo
         if (right_tiene_not)
         {
             ASTNode *not_node = create_node(NODE_EXPR);
@@ -396,14 +408,16 @@ ASTNode *parse_expression()
         }
         else
         {
-            op_node->right = right_node;
+            op_node->right = right_node; // <-- AQUÍ SE COLGA EL HIJO DERECHO CORRECTAMENTE
         }
 
-        node = op_node; // El nodo raíz actual pasa a ser el árbol combinado del operador
+        // El operador se convierte en la nueva raíz de la sub-expresión
+        node = op_node;
     }
 
     return node;
 }
+
 // -----------------------------------------------------------------------------
 /* CONDICION IF*/
 // -----------------------------------------------------------------------------

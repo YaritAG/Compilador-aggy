@@ -11,6 +11,12 @@
 #include "include/parser.h"
 #include "include/semantic.h" // Conectamos el Header Nuevo unificado
 
+// ====================================================================
+// DECLARACIÓN EXTERN DE LOS CONTADORES GLOBALES DE ÁMBITO
+// ====================================================================
+extern int current_scope;
+extern int scope_counter;
+
 /*
  * Función: has_valid_extension
  * Verifica si el nombre del archivo termina estrictamente en ".aggy".
@@ -66,6 +72,12 @@ int main(int argc, char *argv[])
 
         // 6. Fase 3: Análisis Semántico (NUEVO)
         printf("[INFO] Iniciando analisis semantico...\n");
+
+        // ====================================================================
+        // REINICIO CRUCIAL DE ÁMBITOS ANTES DEL RECORRIDO DEL AST
+        // ====================================================================
+        current_scope = 0; // Regresamos al ámbito global
+        scope_counter = 0; // Reiniciamos el contador secuencial
 
         analyze_semantics(root); // Recorremos el árbol buscando errores de lógica
 

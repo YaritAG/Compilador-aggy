@@ -31,8 +31,9 @@ void insert_symbol(const char *name, int type)
     Symbol *new_symbol = (Symbol *)malloc(sizeof(Symbol));
     strcpy(new_symbol->name, name);
     new_symbol->type = type;
-    new_symbol->scope_id = current_scope; // <--- Se registra con el ámbito en el que se encuentra
-    new_symbol->next = symbol_table;      // Se inserta al inicio de la lista
+    new_symbol->scope_id = current_scope;
+    new_symbol->active = 1; // <-- ¡Nace completamente viva!
+    new_symbol->next = symbol_table;
     symbol_table = new_symbol;
 
     printf("[INFO Semantico]: Variable '%s' registrada exitosamente en ambito %d.\n", name, current_scope);
@@ -42,22 +43,16 @@ void insert_symbol(const char *name, int type)
 Symbol *lookup_symbol(const char *name)
 {
     Symbol *current = symbol_table;
-
     while (current != NULL)
     {
-        // Una variable es visible si coincide el nombre Y:
-        // - Pertenece al mismo ámbito local exacto en el que estamos parados.
-        // - O pertenece al ámbito global (0).
-        if (strcmp(current->name, name) == 0)
+        if (strcmp(current->name, name) == 0 && current->active == 1)
         {
-            if (current->scope_id == current_scope || current->scope_id == 0)
-            {
-                return current; // Encontrada y accesible de forma legítima
-            }
+            // Si está activa, es totalmente válida y accesible
+            return current;
         }
         current = current->next;
     }
-    return NULL; // Existe en la tabla pero está en un ámbito privado/muerto, o nunca se declaró
+    return NULL;
 }
 
 // 3. Liberar la memoria de la tabla al terminar
@@ -78,73 +73,77 @@ void analyze_semantics(ASTNode *node)
     if (node == NULL)
         return;
 
+    // Tu detector de tráfico súper útil para seguir depurando
+    printf("[SEMANTICO VISITANDO]: Tipo: %d | Valor: '%s'\n", node->type, node->value ? node->value : "NULL");
+
     int previous_scope = current_scope;
 
-    // Ajusta según los números reales de tu enum (Nodo Tipo 3 es tu IF)
-    if (node->type == 3) // Cambia '3' por tu constante NODE_IF si corresponde
+    // 1. Manejo de ámbitos dinámicos (Tipo 3: Bloques IF/WHILE)
+    if (node->type == 3)
     {
         scope_counter++;
         current_scope = scope_counter;
     }
 
-    // Si el nodo contiene un texto que no sea un operador o número, validamos existencia
+    // 2. REGLA DE ORO SEMÁNTICA CON FILTROS DE PROTECCIÓN:
+    // Evaluamos nodos Tipo 2 (asignación) y Tipo 7 (expresiones/condiciones)
+    // ====================================================================
+    // REGLA SEMÁNTICA TOTAL BLINDADA
+    // ====================================================================
     if (node->value != NULL && strlen(node->value) > 0)
     {
-        // Validamos si es una cadena alfabética pura (un identificador de variable)
-        if ((node->value[0] >= 'a' && node->value[0] <= 'z') || (node->value[0] >= 'A' && node->value[0] <= 'Z'))
+        // 1. Si es un nodo de DECLARACIÓN (Tipo 1), NO lo validamos como error de uso
+        // porque la variable apenas está naciendo aquí.
+        if (node->type != 1)
         {
-            // Ignoramos palabras clave explícitas que puedan venir en nodos genéricos
-            if (strcmp(node->value, "true") != 0 && strcmp(node->value, "false") != 0)
+            // Si el valor empieza con una letra (identificador potencial)
+            if ((node->value[0] >= 'a' && node->value[0] <= 'z') || (node->value[0] >= 'A' && node->value[0] <= 'Z'))
             {
-                if (lookup_symbol(node->value) == NULL)
+                // Filtro de palabras reservadas
+                if (strcmp(node->value, "true") != 0 &&
+                    strcmp(node->value, "false") != 0 &&
+                    strcmp(node->value, "int") != 0 &&
+                    strcmp(node->value, "float") != 0 &&
+                    strcmp(node->value, "print") != 0 &&
+                    strcmp(node->value, "if") != 0 &&
+                    strcmp(node->value, "while") != 0)
                 {
-                    fprintf(stderr, "[ERROR Semantico]: Variable '%s' usada sin declarar o fuera de su ambito legal.\n", node->value);
-                    exit(1);
+                    // Validamos si la variable que se intenta USAR es legal y está activa
+                    if (lookup_symbol(node->value) == NULL)
+                    {
+                        fprintf(stderr, "[ERROR Semantico]: Variable '%s' usada sin declarar o fuera de su ambito legal.\n", node->value);
+                        exit(1);
+                    }
                 }
             }
         }
     }
 
-    // Asegúrate de recorrer TODOS los caminos posibles del nodo
+    // 3. Recorremos primero el cuerpo interno del bloque (hijo izquierdo)
     analyze_semantics(node->left);
-    analyze_semantics(node->right);
 
+    // 4. Al terminar de procesar el cuerpo interno, apagamos las variables de ese ámbito
+    if (node->type == 3)
+    {
+        liberar_variables_del_ambito(current_scope);
+    }
+
+    // 5. Restauramos el ámbito padre antes de movernos de forma secuencial al resto del programa
     current_scope = previous_scope;
+
+    // 6. Recorremos el resto del programa o instrucciones siguientes (hijo derecho)
+    analyze_semantics(node->right);
 }
 
-void liberar_variables_del_ambito(int scope_a_borrar)
+void liberar_variables_del_ambito(int scope)
 {
     Symbol *current = symbol_table;
-    Symbol *prev = NULL;
-
     while (current != NULL)
     {
-        if (current->scope_id == scope_a_borrar)
+        if (current->scope_id == scope)
         {
-            // Guardamos el nodo que vamos a eliminar
-            Symbol *temp = current;
-
-            if (prev == NULL)
-            {
-                // Si el nodo a borrar es la cabeza de la lista, movemos la cabeza global
-                symbol_table = current->next;
-                current = symbol_table;
-            }
-            else
-            {
-                // Si está en medio o al final, puenteamos el puntero anterior
-                prev->next = current->next;
-                current = current->next;
-            }
-
-            // Liberamos físicamente la memoria del símbolo muerto
-            free(temp);
+            current->active = 0; // <-- Apagamos la variable, ya no es accesible
         }
-        else
-        {
-            // Avanzamos normalmente si no pertenece al ámbito expirado
-            prev = current;
-            current = current->next;
-        }
+        current = current->next;
     }
 }
