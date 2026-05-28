@@ -139,14 +139,21 @@ ASTNode *parse_program()
 // -----------------------------------------------------------------------------
 ASTNode *parse_print()
 {
-    ASTNode *node = create_node(NODE_PRINT); // Asegúrate de tener NODE_PRINT en tu enum de nodos
+    // 1. Consumimos la palabra clave 'print'
     consume(TOKEN_PRINT);
     consume(TOKEN_LPAREN);
 
-    // Validar qué se va a imprimir (un ID o un número)
+    ASTNode *argument_node = NULL;
+
+    // 2. Validar qué se va a imprimir y guardar su información en un nodo hijo
     if (lookahead.type == TOKEN_ID || lookahead.type == TOKEN_NUM_INT || lookahead.type == TOKEN_NUM_FLOAT)
     {
-        advance();
+        // Creamos un nodo para el argumento (por ejemplo, un NODE_EXPR o un tipo variable/literal)
+        // Guardamos el lexema (el nombre de la variable o el número) en el campo 'value'
+        argument_node = create_node(NODE_EXPR);
+        strcpy(argument_node->value, lookahead.lexeme);
+
+        advance(); // Ahora sí avanzamos seguros
     }
     else
     {
@@ -155,8 +162,13 @@ ASTNode *parse_print()
     }
 
     consume(TOKEN_RPAREN);
-    consume(TOKEN_SEMICOLON); // Si tu lenguaje obliga a usar ';' tras el print
-    return node;
+    consume(TOKEN_SEMICOLON);
+
+    // 3. Creamos el nodo principal del PRINT y le colgamos el argumento como su hijo izquierdo
+    ASTNode *print_node = create_node(NODE_PRINT);
+    print_node->left = argument_node; // <-- ¡EL VÍNCULO CRUCIAL!
+
+    return print_node;
 }
 
 ASTNode *parse_statement()
@@ -428,6 +440,7 @@ ASTNode *parse_if()
         last_stmt = stmt;
     }
     consume(TOKEN_RBRACE);
+    liberar_variables_del_ambito(current_scope);
     current_scope = prev_scope; // Salida del ámbito del IF
 
     // Creamos un nodo conector intermedio para albergar el cuerpo verdadero y el falso
@@ -471,6 +484,7 @@ ASTNode *parse_if()
             elseif_last_stmt = stmt;
         }
         consume(TOKEN_RBRACE);
+        liberar_variables_del_ambito(current_scope);
         current_scope = prev_scope; // Salida del ámbito
 
         // Conector para el cuerpo de este elseif
@@ -511,6 +525,7 @@ ASTNode *parse_if()
             else_last_stmt = stmt;
         }
         consume(TOKEN_RBRACE);
+        liberar_variables_del_ambito(current_scope);
         current_scope = prev_scope; // Salida del ámbito
 
         // El cuerpo del else se cuelga directamente en la última rama derecha disponible
@@ -609,11 +624,12 @@ ASTNode *parse_for()
     }
 
     consume(TOKEN_RBRACE);
-
+    liberar_variables_del_ambito(current_scope); // Limpiamos las variables del ámbito del for
     // ==========================================
     // CONTROL DE ÁMBITO: SALIDA DEL CICLO FOR
     // ==========================================
     current_scope = prev_scope;
+
 
     node->right = for_body;
     return node;
@@ -652,6 +668,7 @@ ASTNode *parse_while()
     }
 
     consume(TOKEN_RBRACE); // <-- Aquí se cierra el bloque
+    liberar_variables_del_ambito(current_scope);
 
     // ==========================================
     // CONTROL DE ÁMBITO: SALIDA DEL BUCLE WHILE

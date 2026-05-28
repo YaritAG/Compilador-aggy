@@ -1,16 +1,8 @@
-int nota = 85;
-int grado = 0;
+int edad = 20;
 
-if (nota >= 90) {
-    grado = 5;
-} elseif (nota >= 80) {
-    grado = 4;
-} elseif (nota >= 70) {
-    grado = 3;
-} elseif (nota >= 60) {
-    grado = 2;
-} else {
-    grado = 1;
+if (edad >= 18) {
+    bool es_mayor = true; // Nace y muere en el ámbito 1
+    print(es_mayor);
 }
 
-print(grado);
+print(es_mayor); // ¡ERROR SEMÁNTICO! 'es_mayor' no existe en el ámbito 0.

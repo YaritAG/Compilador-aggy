@@ -3,6 +3,7 @@
 #include <string.h>
 #include "../include/ast.h"
 #include "../include/semantic.h"
+#include <stdbool.h>
 
 // Puntero global a la cabeza de nuestra Tabla de Símbolos
 Symbol *symbol_table = NULL;
@@ -42,20 +43,21 @@ Symbol *lookup_symbol(const char *name)
 {
     Symbol *current = symbol_table;
 
-    // Al recorrer desde el inicio de la lista, inspeccionamos primero las variables
-    // locales más recientes debido a la inserción al inicio (LIFO).
     while (current != NULL)
     {
         // Una variable es visible si coincide el nombre Y:
-        // - Pertenece al mismo ámbito local actual.
+        // - Pertenece al mismo ámbito local exacto en el que estamos parados.
         // - O pertenece al ámbito global (0).
-        if (strcmp(current->name, name) == 0 && (current->scope_id == current_scope || current->scope_id == 0))
+        if (strcmp(current->name, name) == 0)
         {
-            return current; // Encontrada y accesible
+            if (current->scope_id == current_scope || current->scope_id == 0)
+            {
+                return current; // Encontrada y accesible de forma legítima
+            }
         }
         current = current->next;
     }
-    return NULL; // No visible o no declarada
+    return NULL; // Existe en la tabla pero está en un ámbito privado/muerto, o nunca se declaró
 }
 
 // 3. Liberar la memoria de la tabla al terminar
@@ -76,31 +78,73 @@ void analyze_semantics(ASTNode *node)
     if (node == NULL)
         return;
 
-    // Guardamos el ámbito previo antes de procesar cualquier nodo
     int previous_scope = current_scope;
 
-    // Detectamos si este nodo representa la apertura de un bloque con sus propias llaves { }
-    // Modifica o añade tipos de nodo según correspondan en tu enum ast.h
-    if (node->type == NODE_IF || node->type == NODE_WHILE || node->type == NODE_DO_WHILE || node->type == NODE_FOR)
+    // Ajusta según los números reales de tu enum (Nodo Tipo 3 es tu IF)
+    if (node->type == 3) // Cambia '3' por tu constante NODE_IF si corresponde
     {
         scope_counter++;
-        current_scope = scope_counter; // Entramos a un nuevo sub-ámbito único
+        current_scope = scope_counter;
     }
 
-    // Validación de usos/asignaciones
-    if (node->type == NODE_ASSIGN)
+    // Si el nodo contiene un texto que no sea un operador o número, validamos existencia
+    if (node->value != NULL && strlen(node->value) > 0)
     {
-        if (lookup_symbol(node->value) == NULL)
+        // Validamos si es una cadena alfabética pura (un identificador de variable)
+        if ((node->value[0] >= 'a' && node->value[0] <= 'z') || (node->value[0] >= 'A' && node->value[0] <= 'Z'))
         {
-            fprintf(stderr, "[ERROR Semantico]: Variable '%s' usada sin declarar.\n", node->value);
-            exit(1);
+            // Ignoramos palabras clave explícitas que puedan venir en nodos genéricos
+            if (strcmp(node->value, "true") != 0 && strcmp(node->value, "false") != 0)
+            {
+                if (lookup_symbol(node->value) == NULL)
+                {
+                    fprintf(stderr, "[ERROR Semantico]: Variable '%s' usada sin declarar o fuera de su ambito legal.\n", node->value);
+                    exit(1);
+                }
+            }
         }
     }
 
-    // Continuar recorrido recursivo por los subárboles
+    // Asegúrate de recorrer TODOS los caminos posibles del nodo
     analyze_semantics(node->left);
     analyze_semantics(node->right);
 
-    // Al regresar del recorrido de este nodo, restauramos el ámbito padre
     current_scope = previous_scope;
+}
+
+void liberar_variables_del_ambito(int scope_a_borrar)
+{
+    Symbol *current = symbol_table;
+    Symbol *prev = NULL;
+
+    while (current != NULL)
+    {
+        if (current->scope_id == scope_a_borrar)
+        {
+            // Guardamos el nodo que vamos a eliminar
+            Symbol *temp = current;
+
+            if (prev == NULL)
+            {
+                // Si el nodo a borrar es la cabeza de la lista, movemos la cabeza global
+                symbol_table = current->next;
+                current = symbol_table;
+            }
+            else
+            {
+                // Si está en medio o al final, puenteamos el puntero anterior
+                prev->next = current->next;
+                current = current->next;
+            }
+
+            // Liberamos físicamente la memoria del símbolo muerto
+            free(temp);
+        }
+        else
+        {
+            // Avanzamos normalmente si no pertenece al ámbito expirado
+            prev = current;
+            current = current->next;
+        }
+    }
 }

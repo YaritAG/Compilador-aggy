@@ -24,6 +24,7 @@ extern int scope_counter;
 void insert_symbol(const char *name, int type);
 Symbol *lookup_symbol(const char *name);
 void free_symbol_table();
+void liberar_variables_del_ambito(int scope_a_borrar);
 
 // Prototipo del Analizador Semántico principal
 void analyze_semantics(ASTNode *node);
