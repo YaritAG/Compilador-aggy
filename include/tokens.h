@@ -29,8 +29,18 @@ typedef enum
     TOKEN_LPAREN,
     TOKEN_RPAREN,
     TOKEN_SEMICOLON,
-    TOKEN_EOF,
-    TOKEN_ERROR
+    TOKEN_ERROR,
+    TOKEN_BOOL,  // Para la palabra clave 'bool'
+    TOKEN_TRUE,  // Para el valor 'true'
+    TOKEN_FALSE, // Para el valor 'false'
+    TOKEN_PRINT,
+    TOKEN_AND,
+    TOKEN_OR,
+    TOKEN_NOT,
+    TOKEN_ELSEIF,
+
+    TOKEN_EOF
+
 } TokenType;
 
 #endif

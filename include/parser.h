@@ -6,6 +6,7 @@
 #define PARSER_H
 
 #include "scanner.h"
+#include <stdbool.h>
 #include "ast.h"
 
 // Función principal que inicia el proceso de parseo

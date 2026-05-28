@@ -33,6 +33,8 @@ TokenType identify_keyword(char *lexeme)
         return TOKEN_IF;
     if (strcmp(lexeme, "else") == 0)
         return TOKEN_ELSE;
+    if (strcmp(lexeme, "elseif") == 0) // <-- Ahora sí llegará aquí limpiamente
+        return TOKEN_ELSEIF;
     if (strcmp(lexeme, "while") == 0)
         return TOKEN_WHILE;
     if (strcmp(lexeme, "do") == 0)
@@ -43,7 +45,15 @@ TokenType identify_keyword(char *lexeme)
         return TOKEN_INT;
     if (strcmp(lexeme, "float") == 0)
         return TOKEN_FLOAT;
-    
+    if (strcmp(lexeme, "bool") == 0)
+        return TOKEN_BOOL;
+    if (strcmp(lexeme, "true") == 0)
+        return TOKEN_TRUE;
+    if (strcmp(lexeme, "false") == 0)
+        return TOKEN_FALSE;
+    if (strcmp(lexeme, "print") == 0)
+        return TOKEN_PRINT;
+
     // Si no coincide con ninguna, es un identificador de variable/función creado por el usuario
     return TOKEN_ID;
 }
@@ -79,16 +89,14 @@ Token get_next_token()
                 current_line++;
                 token.line = current_line;
             }
-            continue; // Sigue limpiando espacios
+            continue;
         }
 
-        // ¡AQUÍ ESTÁ EL TRUCO PARA LOS COMENTARIOS!
         if (c == '/')
         {
             int next_c = fgetc(source_file);
             if (next_c == '/')
             {
-                // Es un comentario de línea (//), ignoramos todo hasta el '\n' o EOF
                 while ((c = fgetc(source_file)) != '\n' && c != EOF)
                     ;
                 if (c == '\n')
@@ -96,22 +104,18 @@ Token get_next_token()
                     current_line++;
                     token.line = current_line;
                 }
-                continue; // Volver a empezar el bucle para buscar tokens reales
+                continue;
             }
             else
             {
-                // No era un comentario, era una división legítima.
-                // Devolvemos el segundo carácter para no perderlo.
                 ungetc(next_c, source_file);
                 break;
             }
         }
 
-        // Si no es espacio ni comentario, salimos del bucle de limpieza
         break;
     }
 
-    // Si llegamos al final del archivo, retornar TOKEN_EOF
     if (c == EOF)
     {
         token.type = TOKEN_EOF;
@@ -119,7 +123,6 @@ Token get_next_token()
         return token;
     }
 
-    // [AQUÍ SIGUE EXACTAMENTE IGUAL TU CÓDIGO]
     // 2. Estado: Identificadores y Palabras Reservadas
     if (isalpha(c) || c == '_')
     {
@@ -131,10 +134,9 @@ Token get_next_token()
             if (i < 31)
                 token.lexeme[i++] = c;
         }
-        ungetc(c, source_file); // Devolver el carácter sobrante
+        ungetc(c, source_file);
         token.lexeme[i] = '\0';
 
-        // Validar si es palabra reservada o ID
         token.type = identify_keyword(token.lexeme);
         return token;
     }
@@ -172,7 +174,6 @@ Token get_next_token()
 
     switch (c)
     {
-    // Operadores de asignación e igualdad
     case '=':
         c = fgetc(source_file);
         if (c == '=')
@@ -187,7 +188,9 @@ Token get_next_token()
         }
         return token;
 
-    // Operadores de desigualdad
+    // =========================================================
+    // MODIFICADO: Ahora '!' suelto es un operador NOT booleano
+    // =========================================================
     case '!':
         c = fgetc(source_file);
         if (c == '=')
@@ -198,11 +201,44 @@ Token get_next_token()
         else
         {
             ungetc(c, source_file);
-            token.type = TOKEN_ERROR;
+            token.type = TOKEN_NOT; // <-- Cambiado de TOKEN_ERROR a TOKEN_NOT
         }
         return token;
 
-    // Menor que y Menor o igual
+    // =========================================================
+    // NUEVO: Operador Lógico AND (&&)
+    // =========================================================
+    case '&':
+        c = fgetc(source_file);
+        if (c == '&')
+        {
+            token.type = TOKEN_AND;
+            strcpy(token.lexeme, "&&");
+        }
+        else
+        {
+            ungetc(c, source_file);
+            token.type = TOKEN_ERROR; // Un solo '&' no es válido en aggy
+        }
+        return token;
+
+    // =========================================================
+    // NUEVO: Operador Lógico OR (||)
+    // =========================================================
+    case '|':
+        c = fgetc(source_file);
+        if (c == '|')
+        {
+            token.type = TOKEN_OR;
+            strcpy(token.lexeme, "||");
+        }
+        else
+        {
+            ungetc(c, source_file);
+            token.type = TOKEN_ERROR; // Un solo '|' no es válido en aggy
+        }
+        return token;
+
     case '<':
         c = fgetc(source_file);
         if (c == '=')
@@ -217,7 +253,6 @@ Token get_next_token()
         }
         return token;
 
-    // Mayor que y Mayor o igual
     case '>':
         c = fgetc(source_file);
         if (c == '=')
@@ -232,7 +267,6 @@ Token get_next_token()
         }
         return token;
 
-    // Operadores aritméticos simples
     case '+':
         token.type = TOKEN_PLUS;
         return token;
@@ -242,14 +276,10 @@ Token get_next_token()
     case '*':
         token.type = TOKEN_MUL;
         return token;
-
-    // OJO: Este case '/' ahora solo se ejecuta si la diagonal
-    // estaba suelta (para divisiones reales)
     case '/':
         token.type = TOKEN_DIV;
         return token;
 
-    // Delimitadores
     case ';':
         token.type = TOKEN_SEMICOLON;
         return token;
@@ -267,7 +297,6 @@ Token get_next_token()
         return token;
     }
 
-    // Si llega aquí, es un carácter que no pertenece al alfabeto de .aggy
     token.type = TOKEN_ERROR;
     return token;
 }

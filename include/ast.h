@@ -16,7 +16,8 @@ typedef enum
     NODE_FOR,
     NODE_DO_WHILE,
     NODE_WHILE,
-    NODE_EXPR
+    NODE_EXPR,
+    NODE_PRINT
 } NodeType;
 
 // Cada nodo del AST tiene un tipo, punteros a sus hijos (izquierdo y derecho) y un campo para almacenar valores (como identificadores o números).

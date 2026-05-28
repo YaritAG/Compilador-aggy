@@ -1,5 +1,16 @@
-int contador_ciclos_operacion_1;
-contador_ciclos_operacion_1 = 50;
-if (contador_ciclos_operacion_1 == 50) {
-    int temporal_2;
+int nota = 85;
+int grado = 0;
+
+if (nota >= 90) {
+    grado = 5;
+} elseif (nota >= 80) {
+    grado = 4;
+} elseif (nota >= 70) {
+    grado = 3;
+} elseif (nota >= 60) {
+    grado = 2;
+} else {
+    grado = 1;
 }
+
+print(grado);
